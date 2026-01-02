@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AddamCO Invoices</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </div>
+      <div class="brand-text">
+        <div class="name">AddamCO</div>
+        <a class="link" href="https://addam.in" target="_blank">addam.in</a>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="newInvoiceBtn" class="btn primary">New Invoice</button>
+      <select id="filterStatus" class="select">
+        <option value="all">All</option>
+        <option value="unpaid">Unpaid</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <aside class="sidebar">
+      <div class="sidebar-header">Invoices</div>
+      <div id="invoiceList" class="invoice-list"></div>
+    </aside>
+    <section class="editor">
+      <div class="editor-form">
+        <div class="form-row">
+          <div class="field">
+            <label>Invoice Number</label>
+            <input id="invNumber" type="text" placeholder="INV-0001">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="invDate" type="date">
+          </div>
+          <div class="field">
+            <label>Due Date</label>
+            <input id="dueDate" type="date">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field">
+            <label>Client Type</label>
+            <select id="clientType">
+              <option value="IN">India</option>
+              <option value="US">United States</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Currency</label>
+            <select id="currency">
+              <option value="INR">INR</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tax Rate (%)</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input id="taxRate" type="number" step="0.01" placeholder="18" style="flex: 1;">
+              <span id="formTaxAmount" style="font-size: 12px; color: var(--muted); white-space: nowrap;"></span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Discount</label>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input id="discount" type="number" step="0.01" placeholder="0" style="flex: 1;">
+              <select id="discountType" style="width: 60px; padding: 4px;">
+                <option value="fixed">Fixed</option>
+                <option value="percent">%</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field grow">
+            <label>Client Name</label>
+            <input id="clientName" type="text" placeholder="Client Co.">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="status">
+              <option value="unpaid">Unpaid</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field grow">
+            <label>Client Email</label>
+            <input id="clientEmail" type="email" placeholder="billing@client.com">
+          </div>
+          <div class="field">
+            <label>Client Phone</label>
+            <input id="clientPhone" type="text" placeholder="+91 90000 00000">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="field grow">
+            <label>Client Address</label>
+            <textarea id="clientAddress" rows="3" placeholder="Street, City, State, ZIP"></textarea>
+          </div>
+          <div class="field">
+            <label id="taxIdLabel">GSTIN</label>
+            <input id="taxId" type="text" placeholder="Optional">
+          </div>
+        </div>
+
+        <div class="items-header">
+          <div>Items</div>
+          <button id="addItemBtn" class="btn">Add Item</button>
+        </div>
+        <div id="itemsContainer" class="items"></div>
+
+        <div class="form-row">
+          <div class="field grow">
+            <label>Notes</label>
+            <textarea id="notes" rows="3" placeholder="Payment terms, bank details, etc."></textarea>
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <button id="saveInvoiceBtn" class="btn primary">Save</button>
+          <button id="markPaidBtn" class="btn">Mark Paid</button>
+          <button id="deleteInvoiceBtn" class="btn danger">Delete</button>
+          <button id="downloadPdfBtn" class="btn secondary">Download PDF</button>
+        </div>
+      </div>
+
+      <div class="preview-wrapper">
+        <div id="invoicePreview" class="invoice">
+          <div class="invoice-header">
+            <div class="company">
+              <div class="company-name">AddamCO</div>
+              <div class="company-contact">
+                <div>addam.in</div>
+              </div>
+            </div>
+            <div class="invoice-meta">
+              <div class="meta-row">
+                <div>Invoice</div>
+                <div id="pInvNumber"></div>
+              </div>
+              <div class="meta-row">
+                <div>Date</div>
+                <div id="pInvDate"></div>
+              </div>
+              <div class="meta-row">
+                <div>Due</div>
+                <div id="pDueDate"></div>
+              </div>
+              <div class="meta-row">
+                <div>Status</div>
+                <div id="pStatus"></div>
+              </div>
+            </div>
+          </div>
+          <div class="billto">
+            <div>
+              <div class="label">Bill To</div>
+              <div id="pClientName" class="bold"></div>
+              <div id="pClientEmail"></div>
+              <div id="pClientPhone"></div>
+              <div id="pClientAddress"></div>
+              <div id="pTaxId"></div>
+            </div>
+            <div class="right">
+              <div class="label">Currency</div>
+              <div id="pCurrency"></div>
+              <div class="label">Client Type</div>
+              <div id="pClientType"></div>
+            </div>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="pItemsBody"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Subtotal</td>
+                <td id="pSubtotal"></td>
+              </tr>
+              <tr id="pDiscountRow">
+                <td colspan="3">Discount</td>
+                <td id="pDiscount"></td>
+              </tr>
+              <tr>
+                <td colspan="3">Tax</td>
+                <td id="pTax"></td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="3">Total</td>
+                <td id="pTotal"></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="notes">
+            <div class="label">Notes</div>
+            <div id="pNotes"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+<noscript>Enable JavaScript to use the invoice editor.</noscript>
+</html>
