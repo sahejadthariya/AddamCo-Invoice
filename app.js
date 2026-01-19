@@ -1,398 +1,252 @@
-const els = {
-  list: document.getElementById('invoiceList'),
-  filterStatus: document.getElementById('filterStatus'),
-  newBtn: document.getElementById('newInvoiceBtn'),
-  invNumber: document.getElementById('invNumber'),
-  invDate: document.getElementById('invDate'),
-  dueDate: document.getElementById('dueDate'),
-  clientType: document.getElementById('clientType'),
-  currency: document.getElementById('currency'),
-  taxRate: document.getElementById('taxRate'),
-  clientName: document.getElementById('clientName'),
-  clientEmail: document.getElementById('clientEmail'),
-  clientPhone: document.getElementById('clientPhone'),
-  clientAddress: document.getElementById('clientAddress'),
-  taxIdLabel: document.getElementById('taxIdLabel'),
-  taxId: document.getElementById('taxId'),
-  addItemBtn: document.getElementById('addItemBtn'),
-  itemsContainer: document.getElementById('itemsContainer'),
-  notes: document.getElementById('notes'),
-  status: document.getElementById('status'),
-  discount: document.getElementById('discount'),
-  discountType: document.getElementById('discountType'),
-  saveBtn: document.getElementById('saveInvoiceBtn'),
-  markPaidBtn: document.getElementById('markPaidBtn'),
-  deleteBtn: document.getElementById('deleteInvoiceBtn'),
-  downloadPdfBtn: document.getElementById('downloadPdfBtn'),
-  pInvNumber: document.getElementById('pInvNumber'),
-  pInvDate: document.getElementById('pInvDate'),
-  pDueDate: document.getElementById('pDueDate'),
-  pStatus: document.getElementById('pStatus'),
-  pClientName: document.getElementById('pClientName'),
-  pClientEmail: document.getElementById('pClientEmail'),
-  pClientPhone: document.getElementById('pClientPhone'),
-  pClientAddress: document.getElementById('pClientAddress'),
-  pTaxId: document.getElementById('pTaxId'),
-  pCurrency: document.getElementById('pCurrency'),
-  pClientType: document.getElementById('pClientType'),
-  pItemsBody: document.getElementById('pItemsBody'),
-  pSubtotal: document.getElementById('pSubtotal'),
-  pDiscount: document.getElementById('pDiscount'),
-  pDiscountRow: document.getElementById('pDiscountRow'),
-  pTax: document.getElementById('pTax'),
-  pTotal: document.getElementById('pTotal'),
-  pNotes: document.getElementById('pNotes'),
-  preview: document.getElementById('invoicePreview'),
-  formTaxAmount: document.getElementById('formTaxAmount')
-};
-let invoices = [];
-let currentId = null;
-function uid() {
-  return 'inv_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+:root {
+  --bg: #0b0e12;
+  --panel: #12161c;
+  --panel-2: #161b22;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --primary: #2f81f7;
+  --danger: #ff6b6b;
+  --accent: #7ee787;
+  --border: #30363d;
 }
-function nf(currency) {
-  const locale = currency === 'INR' ? 'en-IN' : 'en-US';
-  return new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'symbol', maximumFractionDigits: 2 });
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
-function saveAll() {
-  localStorage.setItem('addamco_invoices', JSON.stringify(invoices));
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
-function loadAll() {
-  const raw = localStorage.getItem('addamco_invoices');
-  invoices = raw ? JSON.parse(raw) : [];
+.brand { display: flex; align-items: center; gap: 12px; }
+.app-logo {
+   height: 32px;
+   width: auto;
+   display: block;
+ }
+ .app-logo-fallback {
+   width: 32px;
+   height: 32px;
+   background: var(--primary);
+   color: #fff;
+   border-radius: 6px;
+   display: none;
+   place-items: center;
+ }
+.brand-text .name { font-weight: 700; }
+.brand-text .link { color: var(--muted); text-decoration: none; font-size: 12px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.btn, .select, input, textarea, select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
 }
-function setDefaultsByClientType() {
-  if (els.clientType.value === 'IN') {
-    els.taxIdLabel.textContent = 'GSTIN';
-    els.currency.value = 'INR';
-    if (!els.taxRate.value || els.taxRate.value === '0') els.taxRate.value = '18';
-  } else {
-    els.taxIdLabel.textContent = 'Tax ID';
-    els.currency.value = 'USD';
-    if (!els.taxRate.value || els.taxRate.value === '18') els.taxRate.value = '0';
+.btn { cursor: pointer; }
+.btn.primary { background: var(--primary); border-color: transparent; }
+.btn.secondary { background: #1f6feb; }
+.btn.danger { background: var(--danger); border-color: transparent; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+.select { padding-right: 28px; }
+.app-main { display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: calc(100vh - 60px); }
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex; flex-direction: column;
+}
+.sidebar-header {
+  padding: 12px 16px; font-weight: 600; border-bottom: 1px solid var(--border);
+}
+.invoice-list { overflow: auto; flex-grow: 1; }
+.invoice-list:empty::after {
+  content: "No invoices found";
+  display: block;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.invoice-item {
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  padding: 16px; border-bottom: 1px solid var(--border); gap: 12px;
+  cursor: pointer; transition: background 0.2s;
+}
+.invoice-item:hover { background: #1c2128; }
+.invoice-item.active { background: #1c2128; border-left: 4px solid var(--primary); padding-left: 12px; }
+.invoice-item .title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.invoice-item .meta { font-size: 13px; color: var(--muted); }
+.invoice-item .status {
+  padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.invoice-item .status.paid { background: rgba(63, 185, 80, 0.15); color: #56d364; border: 1px solid rgba(63, 185, 80, 0.3); }
+.invoice-item .status.unpaid { background: rgba(248, 81, 73, 0.15); color: #ff7b72; border: 1px solid rgba(248, 81, 73, 0.3); }
+
+.editor { display: grid; grid-template-columns: 580px 1fr; height: 100%; overflow: hidden; }
+.editor-form { padding: 24px; border-right: 1px solid var(--border); background: var(--panel); overflow-y: auto; height: 100%; }
+.form-row { display: flex; gap: 16px; margin-bottom: 16px; }
+.field { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input, .field select, .field textarea { 
+  width: 100%; padding: 10px 12px; font-size: 14px; 
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.15);
+}
+
+.items-header { display: flex; justify-content: space-between; align-items: center; margin: 24px 0 12px; padding-top: 24px; border-top: 1px solid var(--border); }
+.items-header div { font-weight: 700; font-size: 16px; }
+.items { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.item-row { display: grid; grid-template-columns: 1fr 70px 110px 40px; gap: 12px; align-items: start; }
+.remove-item { 
+  background: transparent; border: 1px solid var(--border); color: var(--danger); 
+  padding: 8px; height: 38px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.remove-item:hover { background: rgba(248, 81, 73, 0.1); border-color: var(--danger); }
+
+#addItemBtn { 
+  background: rgba(47, 129, 247, 0.1); 
+  color: var(--primary); 
+  border-color: rgba(47, 129, 247, 0.3);
+  font-weight: 600;
+  padding: 6px 12px;
+}
+#addItemBtn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.editor-actions { 
+  display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; 
+  border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--panel); padding-bottom: 12px;
+}
+.editor-actions .btn { flex: 1; justify-content: center; font-weight: 600; padding: 12px; }
+
+.preview-wrapper { 
+  background: #0d1117; 
+  padding: 60px; 
+  overflow: auto; 
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+}
+/* Better scaling using transform */
+#invoicePreview {
+  transform: scale(0.75);
+  transform-origin: top center;
+  margin-bottom: -100px; /* Offset the scale empty space */
+}
+
+.invoice {
+  background: #fff;
+  color: #111;
+  width: 794px; /* Fixed width for better capture ~210mm */
+  min-height: 1123px; /* ~297mm */
+  margin: 0;
+  padding: 0;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  overflow: hidden;
+  position: relative;
+  border-radius: 4px;
+}
+.watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 120px;
+  font-weight: 900;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  letter-spacing: 10px;
+  width: 100%;
+  text-align: center;
+}
+.watermark.paid { color: rgba(45, 164, 78, 0.15); }
+.watermark.unpaid { color: rgba(207, 34, 46, 0.15); }
+@media print {
+  @page { 
+    margin: 0; 
+    size: A4; 
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+  }
+  .app-header, .sidebar, .editor-form, .editor-actions, .preview-wrapper > *:not(#invoicePreview) { 
+    display: none !important; 
+  }
+  .app-main { 
+    display: block !important; 
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .editor { 
+    display: block !important; 
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .preview-wrapper { 
+    padding: 0 !important; 
+    margin: 0 !important;
+    background: #fff !important; 
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  #invoicePreview { 
+    transform: none !important; 
+    margin: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    min-height: 0 !important;
+  }
+  .invoice {
+    border: none !important;
   }
 }
-function renderList() {
-  const f = els.filterStatus.value;
-  els.list.innerHTML = '';
-  invoices.filter(i => f === 'all' ? true : i.status === f).sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(i => {
-    const item = document.createElement('div');
-    item.className = 'invoice-item';
-    item.dataset.id = i.id;
-    if (currentId === i.id) item.classList.add('active');
-    const left = document.createElement('div');
-    const title = document.createElement('div');
-    title.className = 'title';
-    title.textContent = i.number || '(no number)';
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.textContent = `${i.clientName || 'Client'} • ${fmt(i.currency, sumTotal(i))} • ${i.date || ''}`;
-    left.appendChild(title);
-    left.appendChild(meta);
-    const right = document.createElement('div');
-    const status = document.createElement('div');
-    status.className = 'status ' + (i.status || 'unpaid');
-    status.textContent = (i.status || 'unpaid').toUpperCase();
-    right.appendChild(status);
-    item.appendChild(left);
-    item.appendChild(right);
-    item.onclick = () => openInvoice(i.id);
-    els.list.appendChild(item);
-  });
+.invoice-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 40px; background: #f8f9fa; border-bottom: 1px solid #eee;
 }
-function fmt(currency, value) {
-  return nf(currency || 'INR').format(value || 0);
+.company-name { font-size: 28px; font-weight: 800; color: #111; line-height: 1; margin-bottom: 4px; }
+.company-contact { color: #666; font-size: 13px; }
+.invoice-meta { min-width: 200px; }
+.meta-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.meta-row:last-child { border-bottom: none; }
+.billto { display: flex; justify-content: space-between; padding: 40px; gap: 40px; }
+.billto > div { flex: 1; }
+.billto .right { text-align: right; }
+.label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 4px; }
+.bold { font-weight: 700; color: #111; font-size: 15px; }
+.items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+.items-table th, .items-table td { padding: 12px 40px; text-align: left; border-bottom: 1px solid #eee; }
+.items-table th { background: #f8f9fa; font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+.items-table td:last-child, .items-table th:last-child { text-align: right; }
+.items-table tfoot td { padding: 12px 40px; text-align: right; border-bottom: none; }
+.items-table tfoot tr:first-child td { padding-top: 30px; }
+.total-row td { font-size: 20px; font-weight: 800; color: var(--primary); }
+.notes { padding: 40px; border-top: 1px solid #eee; margin-top: auto; }
+@media (max-width: 1200px) {
+  .app-main { grid-template-columns: 1fr; }
+  .editor { grid-template-columns: 1fr; }
+  .invoice { width: 100%; }
 }
-function sumSubtotal(i) {
-  return (i.items || []).reduce((acc, it) => acc + (Number(it.qty || 0) * Number(it.price || 0)), 0);
-}
-function sumDiscount(i) {
-  const sub = sumSubtotal(i);
-  if (i.discountType === 'percent') {
-    return sub * (Number(i.discount || 0) / 100);
-  }
-  return Number(i.discount || 0);
-}
-function sumTax(i) {
-  const afterDiscount = sumSubtotal(i) - sumDiscount(i);
-  return afterDiscount * Number(i.taxRate || 0) / 100;
-}
-function sumTotal(i) {
-  return sumSubtotal(i) - sumDiscount(i) + sumTax(i);
-}
-function bindPreview(i) {
-  els.pInvNumber.textContent = i.number || '';
-  els.pInvDate.textContent = i.date || '';
-  els.pDueDate.textContent = i.dueDate || '';
-  els.pStatus.textContent = (i.status || 'unpaid').toUpperCase();
-  els.pClientName.textContent = i.clientName || '';
-  els.pClientEmail.textContent = i.clientEmail || '';
-  els.pClientPhone.textContent = i.clientPhone || '';
-  els.pClientAddress.textContent = i.clientAddress || '';
-  const taxLabel = i.clientType === 'IN' ? 'GSTIN' : 'Tax ID';
-  els.pTaxId.textContent = i.taxId ? (taxLabel + ': ' + i.taxId) : '';
-  els.pCurrency.textContent = i.currency || '';
-  els.pClientType.textContent = i.clientType === 'IN' ? 'India' : 'United States';
-  els.pItemsBody.innerHTML = '';
-  (i.items || []).forEach(it => {
-    const tr = document.createElement('tr');
-    const tdDesc = document.createElement('td');
-    tdDesc.textContent = it.desc || '';
-    const tdQty = document.createElement('td');
-    tdQty.textContent = it.qty || 0;
-    const tdPrice = document.createElement('td');
-    tdPrice.textContent = fmt(i.currency, Number(it.price || 0));
-    const tdAmt = document.createElement('td');
-    tdAmt.textContent = fmt(i.currency, Number(it.qty || 0) * Number(it.price || 0));
-    tr.appendChild(tdDesc);
-    tr.appendChild(tdQty);
-    tr.appendChild(tdPrice);
-    tr.appendChild(tdAmt);
-    els.pItemsBody.appendChild(tr);
-  });
-  els.pSubtotal.textContent = fmt(i.currency, sumSubtotal(i));
-  
-  const discVal = sumDiscount(i);
-  if (discVal > 0) {
-    els.pDiscountRow.style.display = 'table-row';
-    els.pDiscount.textContent = '-' + fmt(i.currency, discVal);
-  } else {
-    els.pDiscountRow.style.display = 'none';
-  }
-
-  els.pTax.textContent = fmt(i.currency, sumTax(i));
-  els.pTotal.textContent = fmt(i.currency, sumTotal(i));
-  els.pNotes.textContent = i.notes || '';
-
-  if (els.formTaxAmount) {
-    els.formTaxAmount.textContent = `(${fmt(i.currency, sumTax(i))})`;
-  }
-}
-function readForm() {
-  const data = {
-    id: currentId || uid(),
-    number: els.invNumber.value.trim(),
-    date: els.invDate.value,
-    dueDate: els.dueDate.value,
-    clientType: els.clientType.value,
-    currency: els.currency.value,
-    taxRate: Number(els.taxRate.value || 0),
-    clientName: els.clientName.value.trim(),
-    clientEmail: els.clientEmail.value.trim(),
-    clientPhone: els.clientPhone.value.trim(),
-    clientAddress: els.clientAddress.value.trim(),
-    taxId: els.taxId.value.trim(),
-    notes: els.notes.value.trim(),
-    status: els.status.value,
-    discount: Number(els.discount.value || 0),
-    discountType: els.discountType.value,
-    items: readItems()
-  };
-  return data;
-}
-function readItems() {
-  const rows = Array.from(els.itemsContainer.querySelectorAll('.item-row'));
-  return rows.map(r => ({
-    desc: r.querySelector('input[data-key="desc"]').value.trim(),
-    qty: Number(r.querySelector('input[data-key="qty"]').value || 0),
-    price: Number(r.querySelector('input[data-key="price"]').value || 0)
-  }));
-}
-function writeForm(i) {
-  els.invNumber.value = i.number || '';
-  els.invDate.value = i.date || '';
-  els.dueDate.value = i.dueDate || '';
-  els.clientType.value = i.clientType || 'IN';
-  els.currency.value = i.currency || (i.clientType === 'US' ? 'USD' : 'INR');
-  els.taxRate.value = i.taxRate != null ? i.taxRate : (i.clientType === 'US' ? 0 : 18);
-  els.clientName.value = i.clientName || '';
-  els.clientEmail.value = i.clientEmail || '';
-  els.clientPhone.value = i.clientPhone || '';
-  els.clientAddress.value = i.clientAddress || '';
-  els.taxId.value = i.taxId || '';
-  els.notes.value = i.notes || '';
-  els.status.value = i.status || 'unpaid';
-  els.discount.value = i.discount || 0;
-  els.discountType.value = i.discountType || 'fixed';
-  setDefaultsByClientType();
-  els.itemsContainer.innerHTML = '';
-  (i.items && i.items.length ? i.items : [{ desc: '', qty: 1, price: 0 }]).forEach(addItemRow);
-  bindPreview(i);
-  
-  // Disable Mark Paid if already paid
-  els.markPaidBtn.disabled = i.status === 'paid';
-}
-function newInvoice() {
-  currentId = null;
-  const today = new Date().toISOString().slice(0,10);
-  const d = {
-    id: uid(),
-    number: nextNumber(),
-    date: today,
-    dueDate: today,
-    clientType: 'IN',
-    currency: 'INR',
-    taxRate: 18,
-    clientName: '',
-    clientEmail: '',
-    clientPhone: '',
-    clientAddress: '',
-    taxId: '',
-    notes: '',
-    status: 'unpaid',
-    discount: 0,
-    discountType: 'fixed',
-    items: [{ desc: '', qty: 1, price: 0 }]
-  };
-  writeForm(d);
-}
-function nextNumber() {
-  const base = 'INV-';
-  const nums = invoices.map(i => i.number).filter(Boolean).map(s => Number(String(s).split('-').pop())).filter(n => !isNaN(n));
-  const next = (nums.length ? Math.max(...nums) + 1 : 1).toString().padStart(4, '0');
-  return base + next;
-}
-function addItemRow(it) {
-  const row = document.createElement('div');
-  row.className = 'item-row';
-  const desc = document.createElement('input');
-  desc.placeholder = 'Description';
-  desc.dataset.key = 'desc';
-  desc.value = it.desc || '';
-  const qty = document.createElement('input');
-  qty.type = 'number';
-  qty.step = '1';
-  qty.placeholder = 'Qty';
-  qty.dataset.key = 'qty';
-  qty.value = it.qty != null ? it.qty : 1;
-  const price = document.createElement('input');
-  price.type = 'number';
-  price.step = '0.01';
-  price.placeholder = 'Unit Price';
-  price.dataset.key = 'price';
-  price.value = it.price != null ? it.price : 0;
-  const remove = document.createElement('button');
-  remove.className = 'btn remove-item';
-  remove.title = 'Remove item';
-  remove.innerHTML = '&times;';
-  remove.onclick = () => {
-    row.remove();
-    syncPreviewFromForm();
-  };
-  [desc, qty, price].forEach(el => el.addEventListener('input', syncPreviewFromForm));
-  row.appendChild(desc);
-  row.appendChild(qty);
-  row.appendChild(price);
-  row.appendChild(remove);
-  els.itemsContainer.appendChild(row);
-  
-  // Autofocus description for new rows
-  if (!it.desc) desc.focus();
-}
-function openInvoice(id) {
-  const i = invoices.find(x => x.id === id);
-  if (!i) return;
-  currentId = id;
-  writeForm(i);
-}
-function upsertInvoice() {
-  const data = readForm();
-  if (!data.number) { alert('Invoice number is required'); return; }
-  const idx = invoices.findIndex(i => i.id === data.id);
-  if (idx >= 0) invoices[idx] = data; else invoices.push(data);
-  currentId = data.id;
-  saveAll();
-  renderList();
-  showNotify('Invoice saved');
-}
-function markPaid() {
-  els.status.value = 'paid';
-  upsertInvoice();
-}
-function deleteInvoice() {
-  if (!currentId) return;
-  if (!confirm('Delete this invoice?')) return;
-  invoices = invoices.filter(i => i.id !== currentId);
-  saveAll();
-  currentId = null;
-  newInvoice();
-  renderList();
-  showNotify('Invoice deleted');
-}
-function showNotify(msg) {
-  const n = document.createElement('div');
-  n.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--primary);color:#fff;padding:10px 20px;border-radius:8px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-weight:600;animation:slideIn 0.3s ease-out;';
-  n.textContent = msg;
-  document.body.appendChild(n);
-  setTimeout(() => {
-    n.style.animation = 'slideOut 0.3s ease-in';
-    setTimeout(() => n.remove(), 300);
-  }, 2000);
-}
-function syncPreviewFromForm() {
-  bindPreview(readForm());
-}
-function downloadPdf() {
-  const data = readForm();
-  bindPreview(data);
-  
-  const element = els.preview;
-  // Temporarily reset transform for capture
-  const oldTransform = element.style.transform;
-  const oldMarginBottom = element.style.marginBottom;
-  element.style.transform = 'none';
-  element.style.marginBottom = '0';
-  const oldBoxShadow = element.style.boxShadow;
-  element.style.boxShadow = 'none';
-
-  const opt = {
-    margin: 0,
-    filename: (data.number || 'invoice') + '.pdf',
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { 
-      scale: 2, 
-      useCORS: true, 
-      letterRendering: true,
-      logging: false,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight
-    },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-
-  html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-    element.style.transform = oldTransform;
-    element.style.marginBottom = oldMarginBottom;
-    element.style.boxShadow = oldBoxShadow;
-  }).save();
-}
-function bindEvents() {
-  els.newBtn.onclick = () => {
-    newInvoice();
-    els.invNumber.focus();
-  };
-  els.filterStatus.onchange = renderList;
-  els.addItemBtn.onclick = () => {
-    addItemRow({ desc: '', qty: 1, price: 0 });
-  };
-  els.saveBtn.onclick = upsertInvoice;
-  els.markPaidBtn.onclick = markPaid;
-  els.deleteBtn.onclick = deleteInvoice;
-  els.downloadPdfBtn.onclick = downloadPdf;
-  [
-    els.invNumber, els.invDate, els.dueDate, els.clientType, els.currency, els.taxRate,
-    els.clientName, els.clientEmail, els.clientPhone, els.clientAddress, els.taxId,
-    els.notes, els.status, els.discount, els.discountType
-  ].forEach(el => el.addEventListener('input', syncPreviewFromForm));
-  els.clientType.addEventListener('change', () => {
-    setDefaultsByClientType();
-    syncPreviewFromForm();
-  });
-}
-function bootstrap() {
-  loadAll();
-  renderList();
-  bindEvents();
-  newInvoice();
-}
-document.addEventListener('DOMContentLoaded', bootstrap);
